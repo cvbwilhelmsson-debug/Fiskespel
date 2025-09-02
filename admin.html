@@ -617,32 +617,19 @@
     });
 
     nextRoundBtn.addEventListener('click', runNextRound);
+    
+    // Fix: Saknades en korrekt avslutning här
     nextPhaseBtn.addEventListener('click', () => {
-        switchToPhase2();
-        settingsMenu.classList.add('hidden');
-    });
-    simulateBtn.addEventListener('click', () => {
-        // Simulering är inte implementerad i denna version, men du kan lägga till det här.
-        showMessage("Simulering är inte tillgänglig i den här versionen.");
-        settingsMenu.classList.add('hidden');
-    });
-    resetBtn.addEventListener('click', () => {
-        resetGame(true);
-        settingsMenu.classList.add('hidden');
-    });
-    closeReportBtn.addEventListener('click', () => simulationReportEl.classList.add('hidden'));
-    toggleFishStockBtn.addEventListener('click', async () => {
-        isInfiniteFishStock = !isInfiniteFishStock;
-        updateUI();
-        await updateDoc(doc(db, `/artifacts/${appId}/public/data/game`, 'status'), {
-            isInfiniteFishStock: isInfiniteFishStock
-        });
-        showMessage(isInfiniteFishStock ? 'Oändligt fiskbestånd aktiverat.' : 'Ändligt fiskbestånd aktiverat.');
-        logEvent(isInfiniteFishStock ? 'Oändligt fiskbestånd aktiverat.' : 'Ändligt fiskbestånd aktiverat.');
+      switchToPhase2();
     });
 
-    // Starta spelet vid sidladdning
-    window.onload = initializeDatabase;
+    resetBtn.addEventListener('click', () => {
+      resetGame();
+    });
+    
+    // Initialisera spelet
+    resetGame(false);
+
   </script>
 </body>
 </html>
