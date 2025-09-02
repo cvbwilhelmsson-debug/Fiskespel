@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="sv" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiskespelet - Lagsida</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #1a202c; /* mörk bakgrund */
+      color: #e2e8f0; /* ljus text */
+    }
+    .strategy-button.active {
+      background-color: #4a5568; /* mörkare grå för aktiva knappar */
+      border-color: #63b3ed; /* blå kant */
+      box-shadow: 0 0 10px #63b3ed; /* glow effekt */
+    }
+    .monopoly-button {
+      transition-property: background-color, transform;
+      transition-duration: 0.2s;
+    }
+    .monopoly-button:hover {
+      transform: scale(1.05);
+    }
+    .pulse-yellow-animation {
+      animation: pulse-yellow 1s ease-in-out;
+    }
+    @keyframes pulse-yellow {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    .text-sm {
+        font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-8 flex flex-col items-center justify-center min-h-screen">
+
+  <div class="bg-gray-800 shadow-xl rounded-2xl p-6 sm:p-10 w-full max-w-lg text-center">
+    <h1 class="text-3xl sm:text-4xl font-bold mb-2 text-white">Fiskespelet</h1>
+    <p class="text-gray-400 mb-6">Din lagpanel</p>
+
+    <!-- UI för inloggning -->
+    <div id="auth-container" class="space-y-4">
+      <h2 class="text-xl font-bold">Välj ditt lag</h2>
+      <select id="team-select" class="w-full p-2 rounded-md bg-gray-600 text-white text-center border-2 border-gray-500 cursor-pointer">
+        <option value="">Välj ett lag...</option>
+        <option value="team1">Lag 1</option>
+        <option value="team2">Lag 2</option>
+        <option value="team3">Lag 3</option>
+        <option value="team4">Lag 4</option>
+        <option value="team5">Lag 5</option>
+        <option value="team6">Lag 6</option>
+      </select>
+      <button id="login-btn" class="w-full p-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors duration-200">Gå med i spelet</button>
+      <p id="auth-status" class="text-green-400"></p>
+    </div>
+
+    <!-- Lagpanel (visas efter inloggning) -->
+    <div id="team-panel-container" class="hidden">
+      <div id="team-panel" class="bg-gray-700 rounded-xl p-5 shadow-inner">
+        <h2 id="team-name" class="text-xl font-bold mb-3 text-white"></h2>
+        <div id="game-status" class="bg-blue-600 text-white rounded-full px-4 py-2 inline-block font-semibold mb-4 text-sm">Väntar på att spelet ska starta...</div>
+        
+        <!-- UI för strategi, etc. -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-400 mb-1">Strategi:</label>
+          <div id="strategy-buttons" class="flex space-x-2">
+            <button class="strategy-button flex-1 p-2 rounded-md bg-gray-600 text-white text-xs border-2 border-gray-500 hover:bg-gray-500" data-strategy="none">Avstå</button>
+            <button class="strategy-button flex-1 p-2 rounded-md bg-gray-600 text-white text-xs border-2 border-gray-500 hover:bg-gray-500" data-strategy="low">Lågt</button>
+            <button class="strategy-1 flex-1 p-2 rounded-md bg-gray-600 text-white text-xs border-2 border-gray-500 hover:bg-gray-500" data-strategy="medium">Medel</button>
+            <button class="strategy-button flex-1 p-2 rounded-md bg-gray-600 text-white text-xs border-2 border-gray-500 hover:bg-gray-500" data-strategy="high">Högt</button>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <div class="flex flex-col items-center">
+              <span id="points-gain" class="text-2xl font-bold text-yellow-300 opacity-0 transition-opacity duration-500"></span>
+              <div class="flex justify-between items-center w-full px-2">
+                <span class="text-gray-300 text-sm">Kaptenens poäng:</span>
+                <span id="captain-points" class="font-bold text-yellow-300">0</span>
+              </div>
+              <div class="flex justify-between items-center w-full px-2 mt-1">
+                <span class="text-gray-300 text-sm">Besättningens poäng:</span>
+                <span id="crew-points" class="font-bold text-blue-300">0</span>
+              </div>
+              <div class="flex justify-between items-center w-full px-2 mt-2 border-t border-gray-600 pt-2">
+                <span class="text-gray-300 text-base font-semibold">Total poäng:</span>
+                <span id="total-points" class="font-bold text-white text-lg">0</span>
+              </div>
+          </div>
+        </div>
+        
+        <div id="phase2-inputs" class="hidden mt-4">
+            <h3 class="font-semibold text-sm mb-2 text-gray-400">Kapitalistens roll:</h3>
+            <div class="flex flex-col space-y-2">
+                <label for="captain-percent" class="text-gray-300">Kaptenens andel i %:</label>
+                <input type="number" id="captain-percent" value="80" min="0" max="100" class="w-full p-2 rounded-md bg-gray-600 text-white text-center border-2 border-gray-500">
+            </div>
+            <div class="mt-2 text-sm text-gray-400">
+                <span id="crew-share">Besättningens andel: 20%</span>
+            </div>
+            <div class="mt-4">
+              <button id="invest-btn" class="w-full p-2 rounded-md bg-yellow-600 hover:bg-yellow-700 text-white text-sm border-2 border-yellow-500 transition-colors duration-200">
+                Investera i ny båt (100 poäng)
+              </button>
+              <div class="mt-1 text-sm text-gray-400 text-center">
+                  Nuvarande effektivitet: <span id="multiplier">1.0x</span>
+              </div>
+              <div class="mt-1 text-sm text-gray-400 text-center">
+                  Värde på tillgångar: <span id="asset-value">0</span>
+              </div>
+            </div>
+            <div id="monopoly-container" class="mt-4 hidden">
+              <label class="block text-gray-300 mb-2">Köpa upp konkurrent?</label>
+              <div id="monopoly-buttons" class="flex flex-col space-y-2">
+                <!-- Buttons generated here -->
+              </div>
+            </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Meddelandepanel -->
+    <div id="message-box" class="mt-8 p-4 bg-gray-700 rounded-lg hidden">
+      <p id="message-text" class="text-white text-center font-semibold"></p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, onSnapshot, updateDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Globala variabler tillhandahållna av Canvas-miljön
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+    const authToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+    setLogLevel('Debug');
+    
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    
+    let currentUserId = null;
+    let selectedTeamKey = null;
+
+    // Elementreferenser
+    const authContainer = document.getElementById('auth-container');
+    const teamSelect = document.getElementById('team-select');
+    const loginBtn = document.getElementById('login-btn');
+    const teamPanelContainer = document.getElementById('team-panel-container');
+    const teamNameEl = document.getElementById('team-name');
+    const authStatusEl = document.getElementById('auth-status');
+    const gameStatusEl = document.getElementById('game-status');
+    const strategyButtonsEl = document.getElementById('strategy-buttons');
+    const captainPercentInput = document.getElementById('captain-percent');
+    const crewShareEl = document.getElementById('crew-share');
+    const investBtn = document.getElementById('invest-btn');
+    const monopolyContainer = document.getElementById('monopoly-container');
+    const monopolyButtonsEl = document.getElementById('monopoly-buttons');
+    const messageBox = document.getElementById('message-box');
+    const messageText = document.getElementById('message-text');
+    
+    // Funktion för att visa meddelanden till användaren
+    function showMessage(text, isError = false) {
+      messageText.textContent = text;
+      messageBox.classList.remove('hidden');
+      if (isError) {
+        messageBox.classList.remove('bg-gray-700');
+        messageBox.classList.add('bg-red-700');
+      } else {
+        messageBox.classList.remove('bg-red-700');
+        messageBox.classList.add('bg-gray-700');
+      }
+      setTimeout(() => {
+        messageBox.classList.add('hidden');
+      }, 5000);
+    }
+    
+    // Användarautentisering
+    async function authenticate() {
+        if (authToken) {
+            try {
+                await signInWithCustomToken(auth, authToken);
+                currentUserId = auth.currentUser.uid;
+                authStatusEl.textContent = 'Autentisering lyckades!';
+                console.log('Användare autentiserad med anpassad token:', currentUserId);
+            } catch (error) {
+                console.error('Autentiseringsfel:', error);
+                authStatusEl.textContent = 'Autentisering misslyckades.';
+            }
+        } else {
+            console.error('Ingen autentiseringstoken tillgänglig.');
+            authStatusEl.textContent = 'Autentisering misslyckades: Ingen token.';
+        }
+    }
+
+    // Lyssnar på inloggningsknappen
+    loginBtn.addEventListener('click', async () => {
+        selectedTeamKey = teamSelect.value;
+        if (!selectedTeamKey) {
+            showMessage("Välj ett lag först.", true);
+            return;
+        }
+
+        authContainer.classList.add('hidden');
+        teamPanelContainer.classList.remove('hidden');
+        teamNameEl.textContent = `Lag: ${selectedTeamKey.replace('team', '')}`;
+
+        // Lyssna på lagets data i databasen
+        const teamDocRef = doc(db, `/artifacts/${appId}/public/data/teams`, selectedTeamKey);
+        onSnapshot(teamDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const teamData = docSnap.data();
+                updateUI(teamData);
+            } else {
+                showMessage("Laget hittades inte i databasen. Starta om spelet på adminsidan.", true);
+            }
+        });
+        
+        // Lyssna på spelets globala status
+        const gameStatusDocRef = doc(db, `/artifacts/${appId}/public/data/game`, 'status');
+        onSnapshot(gameStatusDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const statusData = docSnap.data();
+                gameStatusEl.textContent = statusData.message;
+                if (statusData.phase === 2) {
+                    document.getElementById('phase2-inputs').classList.remove('hidden');
+                } else {
+                    document.getElementById('phase2-inputs').classList.add('hidden');
+                }
+            }
+        });
+    });
+
+    // Uppdaterar UI baserat på databasen
+    function updateUI(teamData) {
+        // Uppdatera poäng och fångst
+        document.getElementById('captain-points').textContent = teamData.points;
+        document.getElementById('crew-points').textContent = teamData.crewPoints;
+        document.getElementById('total-points').textContent = teamData.points + teamData.crewPoints;
+
+        // Uppdatera strategi-knappar
+        document.querySelectorAll('.strategy-button').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.strategy === teamData.selectedStrategy) {
+                btn.classList.add('active');
+            }
+        });
+
+        // Uppdatera del 2-inputs
+        captainPercentInput.value = teamData.captainProfitShare;
+        crewShareEl.textContent = `Besättningens andel: ${100 - teamData.captainProfitShare}%`;
+        document.getElementById('multiplier').textContent = `${teamData.catchMultiplier.toFixed(1)}x`;
+        document.getElementById('asset-value').textContent = teamData.assetValue;
+
+        // Uppdatera monopol-knappar
+        if (teamData.isCapitalist) {
+            monopolyContainer.classList.remove('hidden');
+            monopolyButtonsEl.innerHTML = '';
+            
+            // Få en ögonblicksbild av alla team från databasen för att bygga upp monopolknapparna
+            const teamsRef = doc(db, `/artifacts/${appId}/public/data/teams`, 'all');
+            getDoc(teamsRef).then(allTeamsDoc => {
+                if (allTeamsDoc.exists()) {
+                    const allTeamsData = allTeamsDoc.data();
+                    const otherCapitalists = Object.keys(allTeamsData).filter(key => key !== selectedTeamKey && allTeamsData[key].isCapitalist);
+                    
+                    if (otherCapitalists.length > 0) {
+                        otherCapitalists.forEach(otherKey => {
+                            const buyoutCost = 150 + (allTeamsData[otherKey].buyouts * 50);
+                            const buyoutBtn = document.createElement('button');
+                            buyoutBtn.textContent = `Köp upp ${allTeamsData[otherKey].name} (${buyoutCost} poäng)`;
+                            buyoutBtn.className = `monopoly-button w-full p-2 rounded-md text-white border-2 transition-all duration-200`;
+                            buyoutBtn.dataset.targetKey = otherKey;
+                            buyoutBtn.dataset.cost = buyoutCost;
+                            
+                            if (teamData.points >= buyoutCost) {
+                                buyoutBtn.classList.add('bg-gray-600', 'border-gray-500', 'hover:bg-gray-500');
+                            } else {
+                                buyoutBtn.classList.add('bg-gray-800', 'border-gray-700', 'text-gray-500', 'cursor-not-allowed');
+                            }
+                            
+                            if (teamData.selectedBuyoutTarget === otherKey) {
+                                buyoutBtn.classList.add('active');
+                            }
+                            
+                            monopolyButtonsEl.appendChild(buyoutBtn);
+                        });
+                    }
+                }
+            }).catch(error => console.error("Kunde inte hämta teamdata för monopolknappar:", error));
+        } else {
+            monopolyContainer.classList.add('hidden');
+        }
+    }
+
+    // Eventlyssnare för UI-interaktioner
+    strategyButtonsEl.addEventListener('click', async (event) => {
+        const button = event.target.closest('.strategy-button');
+        if (button) {
+            const strategy = button.dataset.strategy;
+            const teamDocRef = doc(db, `/artifacts/${appId}/public/data/teams`, selectedTeamKey);
+            await updateDoc(teamDocRef, { selectedStrategy: strategy });
+        }
+    });
+
+    captainPercentInput.addEventListener('input', async () => {
+        const captainPercentage = parseInt(captainPercentInput.value) || 0;
+        const teamDocRef = doc(db, `/artifacts/${appId}/public/data/teams`, selectedTeamKey);
+        await updateDoc(teamDocRef, { captainProfitShare: captainPercentage });
+    });
+
+    investBtn.addEventListener('click', async () => {
+        const teamDocRef = doc(db, `/artifacts/${appId}/public/data/teams`, selectedTeamKey);
+        await updateDoc(teamDocRef, { requestedInvestment: true });
+    });
+    
+    monopolyButtonsEl.addEventListener('click', async (e) => {
+        const button = e.target.closest('.monopoly-button');
+        if (button) {
+            const targetKey = button.dataset.targetKey;
+            const cost = parseInt(button.dataset.cost);
+            const teamDocRef = doc(db, `/artifacts/${appId}/public/data/teams`, selectedTeamKey);
+            
+            // Kolla först om vi har råd innan vi skickar till databasen
+            const teamData = (await getDoc(teamDocRef)).data();
+            if (teamData.points >= cost) {
+                // Uppdatera databasen med det valda uppköpsmålet
+                await updateDoc(teamDocRef, { selectedBuyoutTarget: targetKey });
+                showMessage(`Försöker köpa upp ${teamData[targetKey].name}. Väntar på att rundan ska köras...`);
+            } else {
+                showMessage("Inte tillräckligt med poäng för att köpa upp det här laget.", true);
+            }
+        }
+    });
+
+    // Starta autentiseringen vid sidladdning
+    authenticate();
+  </script>
+</body>
+</html>
