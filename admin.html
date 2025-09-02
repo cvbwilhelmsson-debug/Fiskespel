@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="sv" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiskespelet - Översikt</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #1a202c; /* mörk bakgrund */
+      color: #e2e8f0; /* ljus text */
+    }
+    .line-through {
+      text-decoration: line-through;
+    }
+    .strategy-button.active {
+      background-color: #4a5568; /* mörkare grå för aktiva knappar */
+      border-color: #63b3ed; /* blå kant */
+      box-shadow: 0 0 10px #63b3ed; /* glow effekt */
+    }
+    .monopoly-button {
+      transition-property: background-color, transform;
+      transition-duration: 0.2s;
+    }
+    .monopoly-button:hover {
+      transform: scale(1.05);
+    }
+    @keyframes pulse-yellow {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    .pulse-yellow-animation {
+      animation: pulse-yellow 1s ease-in-out;
+    }
+    .event-log-item {
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
+        background-color: #2d3748;
+        border-radius: 0.375rem;
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-8 flex flex-col items-center justify-start min-h-full relative">
+  <div class="absolute top-4 right-4 z-20 flex space-x-2">
+    <button id="event-log-toggle-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow-lg transition-colors duration-200">
+      Händelselogg
+    </button>
+    <button id="settings-toggle-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow-lg transition-colors duration-200">
+      Inställningar
+    </button>
+    <div id="settings-menu" class="hidden absolute top-12 right-0 bg-gray-800 rounded-lg p-4 shadow-xl border-2 border-gray-700 w-64 space-y-4">
+      <h3 class="font-bold text-lg mb-2 text-center">Inställningar</h3>
+      <button id="simulate-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full shadow-md transition-colors duration-200 w-full">Kör simulering</button>
+      <button id="next-phase-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-full shadow-md transition-colors duration-200 w-full">Gå till Del 2</button>
+      <button id="toggle-fish-stock-btn" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-full shadow-md transition-colors duration-200 w-full">Oändligt bestånd</button>
+    </div>
+    
+    <div id="event-log-menu" class="hidden absolute top-12 right-0 bg-gray-800 rounded-lg p-4 shadow-xl border-2 border-gray-700 w-80 space-y-2">
+      <h3 class="font-bold text-lg mb-2 text-center">Händelselogg</h3>
+      <div id="event-log-content" class="text-sm space-y-2 max-h-96 overflow-y-auto">
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-gray-800 shadow-xl rounded-2xl p-6 sm:p-10 w-full max-w-5xl text-center">
+    <h1 class="text-3xl sm:text-4xl font-bold mb-2 text-white">Fiskespelet</h1>
+    <p class="text-gray-400 mb-6">Översikt: Klasskampen v4</p>
+    <p class="text-xs text-gray-500 mb-2">Ditt App-ID: <span id="app-id"></span></p>
+
+    <div class="flex flex-col sm:flex-row justify-around items-stretch sm:space-x-4 space-y-4 sm:space-y-0 mb-8">
+      <div id="fish-and-catch-panel" class="relative bg-gray-700 rounded-lg p-4 flex-1 text-center shadow-md">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <div class="text-lg font-bold">Fiskbestånd</div>
+            <div id="fish-stock" class="text-3xl font-extrabold text-blue-400 mt-1">500</div>
+            <div class="text-sm text-gray-400">Prognos: <span id="next-prognosis">750</span></div>
+          </div>
+          <div>
+            <div class="text-lg font-bold">Fångst</div>
+            <div id="total-round-catch" class="text-3xl font-extrabold text-red-400 mt-1">0</div>
+            <div class="text-sm text-gray-400">Värde/fisk: <span id="fish-price" class="text-white">1</span></div>
+          </div>
+        </div>
+      </div>
+      <div id="total-points-panel" class="bg-gray-700 rounded-lg p-4 flex-1 text-center shadow-md">
+        <div class="text-lg font-bold mb-2">Globala poäng</div>
+        <div class="flex flex-col space-y-2 text-sm">
+          <div class="flex justify-between items-center bg-gray-600 rounded-md p-2">
+            <span>Kapitalisternas förmögenhet:</span>
+            <span id="total-capitalist-wealth" class="font-bold text-yellow-300">0</span>
+          </div>
+          <div class="flex justify-between items-center bg-gray-600 rounded-md p-2">
+            <span>Kapitalisternas likvida poäng:</span>
+            <span id="total-capitalist-points" class="font-bold text-white">0</span>
+          </div>
+          <div class="flex justify-between items-center w-full bg-gray-600 rounded-md p-2">
+            <span>Arbetarnas poäng:</span>
+            <span id="total-crew-points" class="font-bold text-blue-300">0</span>
+          </div>
+        </div>
+      </div>
+      <div id="social-outcome-panel" class="bg-gray-700 rounded-lg p-4 flex-1 text-center shadow-md">
+        <div class="text-lg font-bold mb-2">Sociala utfall</div>
+        <div class="flex flex-col space-y-2 text-sm">
+          <div class="flex justify-between items-center bg-gray-600 rounded-md p-2">
+            <span>Förmögenhetsklyfta:</span>
+            <span id="wealth-ratio" class="font-bold text-red-300">1.0x</span>
+          </div>
+          <div class="flex justify-between items-center bg-gray-600 rounded-md p-2">
+            <span>Proletariserade lag:</span>
+            <span id="proletarianized-teams" class="font-bold text-red-300">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="game-phase-display" class="bg-yellow-600 text-white rounded-full px-6 py-2 inline-block font-semibold mb-6 shadow-md">
+      Del 1: Det enkla spelet
+    </div>
+    <div id="largest-catch-panel" class="bg-gray-700 rounded-lg p-4 w-full max-w-lg mx-auto mb-6 shadow-md hidden">
+        <div class="text-lg font-bold text-center mb-2">Största fångsten denna runda</div>
+        <div id="largest-catch-display" class="text-center font-bold text-yellow-300 text-2xl"></div>
+    </div>
+    <div id="teams-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    </div>
+    <div class="mt-8 flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+        <button id="next-round-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-colors duration-200">Kör nästa runda</button>
+        <button id="reset-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-colors duration-200">Starta om spelet</button>
+    </div>
+    <div id="message-box" class="mt-8 p-4 bg-gray-700 rounded-lg hidden">
+      <p id="message-text" class="text-white text-center font-semibold"></p>
+    </div>
+    <div id="simulation-report" class="mt-8 p-6 bg-gray-700 rounded-lg hidden text-left">
+      <h3 class="text-xl font-bold mb-4 text-white">Simuleringsrapport</h3>
+      <div id="report-content" class="space-y-2"></div>
+      <button id="close-report-btn" class="mt-4 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-full">Stäng</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, onSnapshot, setDoc, updateDoc, collection, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    
+    // Globala variabler tillhandahållna av Canvas-miljön
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+    const authToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+    setLogLevel('Debug');
+    
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Initiala variabler för spelet
+    let fishStock = 500;
+    let currentPhase = 1;
+    let fishPrice = 1;
+    let totalCapitalistPoints = 0;
+    let totalCapitalistWealth = 0;
+    let totalCrewPoints = 0;
+    let proletarianizedTeams = 0;
+    let isInfiniteFishStock = false;
+    let isSimulating = false;
+
+    // Fasta spelparametrar
+    const overproductionThreshold = 0.8;
+    const carryingCapacity = 1000;
+    const catchBonus = 25;
+
+    // Elementreferenser
+    const fishStockEl = document.getElementById('fish-stock');
+    const nextPrognosisEl = document.getElementById('next-prognosis');
+    const teamsContainerEl = document.getElementById('teams-container');
+    const nextRoundBtn = document.getElementById('next-round-btn');
+    const simulateBtn = document.getElementById('simulate-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const gamePhaseDisplay = document.getElementById('game-phase-display');
+    const messageBox = document.getElementById('message-box');
+    const messageText = document.getElementById('message-text');
+    const totalCapitalistPointsEl = document.getElementById('total-capitalist-points');
+    const totalCapitalistWealthEl = document.getElementById('total-capitalist-wealth');
+    const totalCrewPointsEl = document.getElementById('total-crew-points');
+    const totalRoundCatchEl = document.getElementById('total-round-catch');
+    const simulationReportEl = document.getElementById('simulation-report');
+    const reportContentEl = document.getElementById('report-content');
+    const closeReportBtn = document.getElementById('close-report-btn');
+    const toggleFishStockBtn = document.getElementById('toggle-fish-stock-btn');
+    const settingsToggleBtn = document.getElementById('settings-toggle-btn');
+    const settingsMenu = document.getElementById('settings-menu');
+    const eventLogToggleBtn = document.getElementById('event-log-toggle-btn');
+    const eventLogMenu = document.getElementById('event-log-menu');
+    const eventLogContent = document.getElementById('event-log-content');
+    const fishAndCatchPanel = document.getElementById('fish-and-catch-panel');
+    const fishPriceEl = document.getElementById('fish-price');
+    const proletarianizedTeamsEl = document.getElementById('proletarianized-teams');
+    const wealthRatioEl = document.getElementById('wealth-ratio');
+    const appIdEl = document.getElementById('app-id');
+    const nextPhaseBtn = document.getElementById('next-phase-btn'); // Lagt till denna rad
+
+    // Hanterar autentisering för adminsidan
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+            try {
+                await signInAnonymously(auth);
+                console.log('Signed in anonymously to the overview page.');
+            } catch (error) {
+                console.error('Anonymous auth failed:', error);
+            }
+        }
+    });
+
+    // Funktion för att visa meddelanden
+    function showMessage(text) {
+      if (isSimulating) return;
+      messageText.textContent = text;
+      messageBox.classList.remove('hidden');
+      setTimeout(() => {
+        messageBox.classList.add('hidden');
+      }, 5000);
+    }
+
+    // Funktion för att logga händelser
+    function logEvent(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      const logItem = document.createElement('div');
+      logItem.className = 'event-log-item';
+      logItem.innerHTML = `<span class="text-gray-400">[${timestamp}]</span> ${message}`;
+      eventLogContent.prepend(logItem);
+    }
+    
+    // Globala variabler för spelet
+    let teams = {};
+
+    // Lyssna på alla lag i databasen i realtid
+    const teamsCollectionRef = collection(db, `/artifacts/${appId}/public/data/teams`);
+    onSnapshot(teamsCollectionRef, (querySnapshot) => {
+        querySnapshot.forEach((doc) => {
+            const teamKey = doc.id;
+            teams[teamKey] = doc.data();
+        });
+        updateUI();
+    });
+
+    // Lyssna på global spelstatus
+    const gameStatusDocRef = doc(db, `/artifacts/${appId}/public/data/game`, 'status');
+    onSnapshot(gameStatusDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const statusData = docSnap.data();
+            currentPhase = statusData.phase;
+            gamePhaseDisplay.textContent = statusData.message;
+        }
+    });
+    
+    // Skapar UI för varje lag
+    function createTeamPanels() {
+        teamsContainerEl.innerHTML = '';
+        Object.keys(teams).forEach((teamKey) => {
+            const team = teams[teamKey];
+            const panelHtml = `
+            <div id="panel-${teamKey}" class="team-panel bg-gray-700 rounded-xl p-5 shadow-inner ${!team.isCapitalist ? 'opacity-40 line-through' : ''}">
+                <h2 class="text-xl font-bold mb-3 text-white">${team.name}</h2>
+                <div class="mb-4">
+                  <div class="text-sm font-medium text-gray-400 mb-1">Strategi: <span class="font-bold text-white">${team.selectedStrategy}</span></div>
+                </div>
+                <div class="flex flex-col items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                  <span class="text-gray-300">Fångst:</span>
+                  <div id="catch-${teamKey}" class="text-5xl font-extrabold text-white">${team.catch}</div>
+                </div>
+                <div class="mt-4">
+                  <div class="flex flex-col items-center">
+                      <span id="points-gain-${teamKey}" class="text-2xl font-bold text-yellow-300"></span>
+                      <div class="flex justify-between items-center w-full px-2">
+                        <span class="text-gray-300 text-sm">Kaptenens poäng:</span>
+                        <span id="captain-points-${teamKey}" class="font-bold text-yellow-300">${team.points}</span>
+                      </div>
+                      <div class="flex justify-between items-center w-full px-2 mt-1">
+                        <span class="text-gray-300 text-sm">Besättningens poäng:</span>
+                        <span id="crew-points-${teamKey}" class="font-bold text-blue-300">${team.crewPoints}</span>
+                      </div>
+                      <div class="flex justify-between items-center w-full px-2 mt-2 border-t border-gray-600 pt-2">
+                        <span class="text-gray-300 text-base font-semibold">Total poäng:</span>
+                        <span id="total-points-${teamKey}" class="font-bold text-white text-lg">${team.points + team.crewPoints}</span>
+                      </div>
+                  </div>
+                </div>
+                <div class="mt-4">
+                  <div class="mt-1 text-sm text-gray-400 text-center">
+                      Kaptenens andel: <span class="font-bold text-white">${team.captainProfitShare}%</span>
+                  </div>
+                  <div class="mt-1 text-sm text-gray-400 text-center">
+                      Nuvarande effektivitet: <span class="font-bold text-white">${team.catchMultiplier.toFixed(1)}x</span>
+                  </div>
+                  <div class="mt-1 text-sm text-gray-400 text-center">
+                      Värde på tillgångar: <span class="font-bold text-white">${team.assetValue}</span>
+                  </div>
+                </div>
+            </div>
+            `;
+            teamsContainerEl.innerHTML += panelHtml;
+        });
+    }
+
+    // Uppdaterar gränssnittet baserat på Firebase-data
+    function updateUI() {
+        if (appIdEl) appIdEl.textContent = appId;
+        
+        createTeamPanels();
+        
+        const totalCatch = Object.values(teams).reduce((sum, team) => sum + team.catch, 0);
+        totalRoundCatchEl.textContent = totalCatch;
+      
+        toggleFishStockPanels();
+
+        if (totalCatch > fishStock * overproductionThreshold && fishStock > 0 && !isInfiniteFishStock) {
+            fishPrice = 0.5;
+            fishPriceEl.classList.remove('text-white');
+            fishPriceEl.classList.add('text-red-400');
+        } else {
+            fishPrice = 1;
+            fishPriceEl.classList.remove('text-red-400');
+            fishPriceEl.classList.add('text-white');
+        }
+        fishPriceEl.textContent = `${fishPrice.toFixed(1)}x`;
+
+        totalCapitalistPoints = 0;
+        totalCapitalistWealth = 0;
+        totalCrewPoints = 0;
+        proletarianizedTeams = 0;
+        
+        Object.values(teams).forEach(team => {
+            if (team.isCapitalist) {
+                totalCapitalistPoints += team.points;
+                totalCapitalistWealth += team.points + team.assetValue;
+                totalCrewPoints += team.crewPoints;
+            } else {
+                totalCrewPoints += team.crewPoints;
+                proletarianizedTeams++;
+            }
+        });
+
+        totalCapitalistPointsEl.textContent = totalCapitalistPoints;
+        totalCapitalistWealthEl.textContent = totalCapitalistWealth;
+        totalCrewPointsEl.textContent = totalCrewPoints;
+        proletarianizedTeamsEl.textContent = proletarianizedTeams;
+
+        if (totalCrewPoints > 0) {
+            const ratio = (totalCapitalistWealth / totalCrewPoints).toFixed(2);
+            wealthRatioEl.textContent = `${ratio}x`;
+        } else if (totalCapitalistWealth > 0) {
+            wealthRatioEl.textContent = `>100x`;
+        } else {
+            wealthRatioEl.textContent = `1.0x`;
+        }
+    }
+    
+    function toggleFishStockPanels() {
+      if (isInfiniteFishStock) {
+        fishStockEl.textContent = 'Oändligt';
+        nextPrognosisEl.textContent = 'N/A';
+        fishAndCatchPanel.classList.add('opacity-50');
+        toggleFishStockBtn.textContent = 'Ändligt bestånd';
+      } else {
+        fishStockEl.textContent = fishStock;
+        const totalCatch = Object.values(teams).reduce((sum, team) => sum + team.catch, 0);
+        const remainingFish = Math.max(0, fishStock - totalCatch);
+        nextPrognosisEl.textContent = Math.round(Math.min(remainingFish * 1.5, carryingCapacity));
+        fishAndCatchPanel.classList.remove('opacity-50');
+        toggleFishStockBtn.textContent = 'Oändligt bestånd';
+      }
+    }
+
+    // Funktion för att köra nästa runda
+    async function runNextRound() {
+        if (isSimulating) return;
+
+        let totalCatch = 0;
+        let largestCatch = 0;
+        let winningTeamKey = null;
+
+        // Beräkna fångst för varje lag baserat på deras val
+        Object.keys(teams).forEach(key => {
+            const team = teams[key];
+            if (team.isCapitalist) {
+                let minPercent, maxPercent;
+                switch(team.selectedStrategy) {
+                    case 'none':
+                        minPercent = 0;
+                        maxPercent = 0;
+                        break;
+                    case 'low':
+                        minPercent = 0.05;
+                        maxPercent = 0.08;
+                        break;
+                    case 'medium':
+                        minPercent = 0.10;
+                        maxPercent = 0.15;
+                        break;
+                    case 'high':
+                        minPercent = 0.15;
+                        maxPercent = 0.25;
+                        break;
+                }
+                
+                let randomCatch = 0;
+                const minCatch = Math.round(fishStock * minPercent);
+                const maxCatch = Math.round(fishStock * maxPercent);
+                if (maxCatch > minCatch) {
+                    randomCatch = Math.floor(Math.random() * (maxCatch - minCatch + 1)) + minCatch;
+                }
+                randomCatch = Math.round(randomCatch * team.catchMultiplier);
+                team.catch = randomCatch;
+                
+                if (team.catch > largestCatch) {
+                    largestCatch = team.catch;
+                    winningTeamKey = key;
+                }
+                totalCatch += team.catch;
+            } else {
+                team.catch = 0;
+            }
+        });
+        
+        // Tillämpa fångstbonus
+        if (winningTeamKey) {
+            teams[winningTeamKey].points += catchBonus;
+            const updatedDoc = { points: teams[winningTeamKey].points, catch: teams[winningTeamKey].catch };
+            await updateDoc(doc(db, `/artifacts/${appId}/public/data/teams`, winningTeamKey), updatedDoc);
+            
+            largestCatchPanel.classList.remove('hidden');
+            largestCatchDisplay.textContent = `${teams[winningTeamKey].name} med ${largestCatch} fiskar (+${catchBonus}p)!`;
+            largestCatchDisplay.classList.add('pulse-yellow-animation');
+            setTimeout(() => {
+                largestCatchDisplay.classList.remove('pulse-yellow-animation');
+            }, 1000);
+        } else {
+            largestCatchPanel.classList.add('hidden');
+        }
+
+        // Hantera överproduktion och fiskpriset
+        if (totalCatch > fishStock * overproductionThreshold && fishStock > 0 && !isInfiniteFishStock) {
+            fishPrice = 0.5;
+            logEvent('Överproduktion! Fiskpriset har halverats.');
+        } else {
+            fishPrice = 1;
+        }
+
+        if (currentPhase === 1) {
+            for (const key of Object.keys(teams)) {
+                const team = teams[key];
+                if (team.isCapitalist) {
+                    team.points += team.catch * fishPrice;
+                    await updateDoc(doc(db, `/artifacts/${appId}/public/data/teams`, key), {
+                        points: team.points,
+                        catch: team.catch
+                    });
+                } else {
+                    await updateDoc(doc(db, `/artifacts/${appId}/public/data/teams`, key), {
+                        catch: 0
+                    });
+                }
+            }
+        } else { // Del 2
+            for (const key of Object.keys(teams)) {
+                const team = teams[key];
+                if (team.isCapitalist) {
+                    // Strejk- och solidaritetseffekter
+                    if (team.captainProfitShare > 75) {
+                        team.catch = Math.round(team.catch * 0.5);
+                        logEvent(`${team.name}s besättning strejkar! Deras fångst för rundan halveras. Ett exempel på klasskonflikt.`);
+                    } else if (team.captainProfitShare < 25) {
+                        team.catch = Math.round(team.catch * 1.5);
+                        logEvent(`${team.name}s besättning arbetar med solidaritet! Deras fångst för rundan ökar med 50%.`);
+                    }
+                    
+                    const totalEarnedPoints = Math.round(team.catch * fishPrice);
+                    const captainPoints = Math.round(totalEarnedPoints * (team.captainProfitShare / 100));
+                    const crewPoints = totalEarnedPoints - captainPoints;
+
+                    team.points += captainPoints;
+                    team.crewPoints += crewPoints;
+
+                    // Hantera investeringsbegäran
+                    if (team.requestedInvestment) {
+                        const investmentCost = 100;
+                        if (team.points >= investmentCost) {
+                            team.points -= investmentCost;
+                            team.catchMultiplier += 0.5;
+                            team.assetValue += investmentCost;
+                            logEvent(`${team.name} investerade i en ny båt för ${investmentCost} poäng! Nuvarande effektivitet: ${team.catchMultiplier.toFixed(1)}x`);
+                        } else {
+                            logEvent(`${team.name} hade inte tillräckligt med poäng för att investera.`);
+                        }
+                        team.requestedInvestment = false; // Återställ begäran
+                    }
+
+                    // Uppköpslogik
+                    if (team.selectedBuyoutTarget && teams[team.selectedBuyoutTarget]) {
+                        const targetTeam = teams[team.selectedBuyoutTarget];
+                        const buyoutCost = 150 + (targetTeam.buyouts * 50);
+                        
+                        if (team.points >= buyoutCost && targetTeam.isCapitalist) {
+                            const acquiredPoints = targetTeam.points;
+                            const acquiredAssets = targetTeam.assetValue;
+                            
+                            team.points -= buyoutCost;
+                            team.points += acquiredPoints;
+                            team.assetValue += acquiredAssets;
+                            
+                            targetTeam.points = 0;
+                            targetTeam.assetValue = 0;
+                            targetTeam.isCapitalist = false;
+                            team.buyouts++;
+                            
+                            logEvent(`${team.name} köpte upp ${targetTeam.name} för ${buyoutCost} poäng!`);
+                        }
+                        team.selectedBuyoutTarget = null; // Återställ målet
+                    }
+
+                    await updateDoc(doc(db, `/artifacts/${appId}/public/data/teams`, key), {
+                        points: team.points,
+                        crewPoints: team.crewPoints,
+                        catch: team.catch,
+                        catchMultiplier: team.catchMultiplier,
+                        assetValue: team.assetValue,
+                        isCapitalist: team.isCapitalist,
+                        buyouts: team.buyouts,
+                        selectedBuyoutTarget: null,
+                        requestedInvestment: false
+                    });
+
+                }
+            }
+        }
+
+        // Uppdatera fiskbeståndet
+        if (!isInfiniteFishStock) {
+            const remainingFish = Math.max(0, fishStock - totalCatch);
+            fishStock = Math.round(Math.min(remainingFish * 1.5, carryingCapacity));
+        }
+
+        await updateDoc(doc(db, `/artifacts/${appId}/public/data/game`, 'status'), { fishStock: fishStock, totalCatch: totalCatch });
+        
+        updateUI();
+    }
+    
+    // Initialiserar databasen med standardvärden
+    async function initializeDatabase() {
+        const teamsData = {
+            'team1': {
+                name: 'Lag 1', catch: 0, points: 0, crewPoints: 0, assetValue: 0, isCapitalist: true, buyouts: 0, selectedBuyoutTarget: null, selectedStrategy: 'medium', captainProfitShare: 80, catchMultiplier: 1, requestedInvestment: false
+            },
+            'team2': {
+                name: 'Lag 2', catch: 0, points: 0, crewPoints: 0, assetValue: 0, isCapitalist: true, buyouts: 0, selectedBuyoutTarget: null, selectedStrategy: 'medium', captainProfitShare: 80, catchMultiplier: 1, requestedInvestment: false
+            },
+            'team3': {
+                name: 'Lag 3', catch: 0, points: 0, crewPoints: 0, assetValue: 0, isCapitalist: true, buyouts: 0, selectedBuyoutTarget: null, selectedStrategy: 'medium', captainProfitShare: 80, catchMultiplier: 1, requestedInvestment: false
+            },
+            'team4': {
+                name: 'Lag 4', catch: 0, points: 0, crewPoints: 0, assetValue: 0, isCapitalist: true, buyouts: 0, selectedBuyoutTarget: null, selectedStrategy: 'medium', captainProfitShare: 80, catchMultiplier: 1, requestedInvestment: false
+            },
+            'team5': {
+                name: 'Lag 5', catch: 0, points: 0, crewPoints: 0, assetValue: 0, isCapitalist: true, buyouts: 0, selectedBuyoutTarget: null, selectedStrategy: 'medium', captainProfitShare: 80, catchMultiplier: 1, requestedInvestment: false
+            },
+            'team6': {
+                name: 'Lag 6', catch: 0, points: 0, crewPoints: 0, assetValue: 0, isCapitalist: true, buyouts: 0, selectedBuyoutTarget: null, selectedStrategy: 'medium', captainProfitShare: 80, catchMultiplier: 1, requestedInvestment: false
+            }
+        };
+
+        for (const key in teamsData) {
+            await setDoc(doc(db, `/artifacts/${appId}/public/data/teams`, key), teamsData[key]);
+        }
+        await setDoc(doc(db, `/artifacts/${appId}/public/data/game`, 'status'), {
+            phase: 1,
+            message: 'Vänta på att en administratör startar rundan...',
+            fishStock: 500,
+            totalCatch: 0
+        });
+        logEvent('Spelet har återställts och databasen har initialiserats.');
+        showMessage('Spelet är redo! Lag kan nu ansluta.');
+        updateUI();
+    }
+    
+    async function switchToPhase2() {
+        if (currentPhase === 2) return;
+        currentPhase = 2;
+        await updateDoc(doc(db, `/artifacts/${appId}/public/data/game`, 'status'), {
+            phase: 2,
+            message: 'Del 2: Klasskampen. Fyll i din strategi och andel.'
+        });
+        logEvent('Spelet gick in i Del 2: Klasskampen.');
+    }
+
+    async function resetGame(shouldShowMessage = true) {
+      await initializeDatabase();
+      if (shouldShowMessage) {
+        showMessage('Spelet har startats om!');
+      }
+    }
+    
+    // Eventlyssnare
+    settingsToggleBtn.addEventListener('click', () => {
+        settingsMenu.classList.toggle('hidden');
+        if (!settingsMenu.classList.contains('hidden')) {
+             eventLogMenu.classList.add('hidden');
+        }
+    });
+    eventLogToggleBtn.addEventListener('click', () => {
+        eventLogMenu.classList.toggle('hidden');
+        if (!eventLogMenu.classList.contains('hidden')) {
+            settingsMenu.classList.add('hidden');
+        }
+    });
+
+    nextRoundBtn.addEventListener('click', runNextRound);
+    nextPhaseBtn.addEventListener('click', () => {
+        switchToPhase2();
+        settingsMenu.classList.add('hidden');
+    });
+    simulateBtn.addEventListener('click', () => {
+        // Simulering är inte implementerad i denna version, men du kan lägga till det här.
+        showMessage("Simulering är inte tillgänglig i den här versionen.");
+        settingsMenu.classList.add('hidden');
+    });
+    resetBtn.addEventListener('click', () => {
+        resetGame(true);
+        settingsMenu.classList.add('hidden');
+    });
+    closeReportBtn.addEventListener('click', () => simulationReportEl.classList.add('hidden'));
+    toggleFishStockBtn.addEventListener('click', async () => {
+        isInfiniteFishStock = !isInfiniteFishStock;
+        updateUI();
+        await updateDoc(doc(db, `/artifacts/${appId}/public/data/game`, 'status'), {
+            isInfiniteFishStock: isInfiniteFishStock
+        });
+        showMessage(isInfiniteFishStock ? 'Oändligt fiskbestånd aktiverat.' : 'Ändligt fiskbestånd aktiverat.');
+        logEvent(isInfiniteFishStock ? 'Oändligt fiskbestånd aktiverat.' : 'Ändligt fiskbestånd aktiverat.');
+    });
+
+    // Starta spelet vid sidladdning
+    window.onload = initializeDatabase;
+  </script>
+</body>
+</html>
