@@ -255,8 +255,25 @@
         
         // Globala variabler tillhandahållna av Canvas-miljön
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const authToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+const firebaseConfig = {
+  apiKey: "AIzaSyXXXXXXX",
+  authDomain: "your-app.firebaseapp.com",
+  projectId: "your-app",
+  storageBucket: "your-app.appspot.com",
+  messagingSenderId: "1234567890",
+  appId: "1:1234567890:web:abcdef123456",
+};
+async function authenticatePlayer() {
+  try {
+    const userCredential = await signInAnonymously(auth);
+    currentUserId = userCredential.user.uid;
+    authStatusEl.textContent = 'Ansluten!';
+    console.log('Signed in as anonymous user:', currentUserId);
+  } catch (error) {
+    console.error('Auth error:', error);
+    authStatusEl.textContent = 'Kunde inte logga in.';
+  }
+}
 
         setLogLevel('Debug');
         
@@ -800,23 +817,6 @@
         
         // Starta appen
         initFirebase();
-        // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyC4NK8xPwfwF_fWHRgXwr5ff9nzfieMRXk",
-  authDomain: "fiskespelet.firebaseapp.com",
-  projectId: "fiskespelet",
-  storageBucket: "fiskespelet.firebasestorage.app",
-  messagingSenderId: "583060403292",
-  appId: "1:583060403292:web:7cd6da2bbe1e141b476299"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
     </script>
 </body>
 </html>
