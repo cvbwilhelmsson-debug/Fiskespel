@@ -271,7 +271,39 @@
     // Initialisera Firebase-appen
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const gameRef = db.ref('game_state');
+    // Initialisera Firebase-appen
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const gameRef = db.ref('game_state');
+   
+// Lyssna på ändringar i databasen och uppdatera spelet
+gameRef.on('value', (snapshot) => {
+    // Kontrollera om det finns data på 'game_state'
+    if (snapshot.exists()) {
+        // Om data finns, uppdatera det lokala spelet
+        const dbData = snapshot.val();
+        teamData = dbData.teams;
+        gameState = dbData.gameState;
+        
+        // Uppdatera UI baserat på vem som är inloggad
+        if (isHost) {
+            createAllTeamPanels();
+        } else if (myTeamKey) {
+            createPlayerPanel(teamData[myTeamKey]);
+        }
+        updateUI();
+    } else {
+        // Om databasen är tom, initialisera den med startvärden
+        gameRef.set({
+            teams: initialTeamData,
+            gameState: initialGameState
+        }).then(() => {
+            console.log("Databasen har initialiserats med startvärden.");
+        }).catch(error => {
+            console.error("Fel vid initialisering av databas:", error);
+        });
+    }
+});
     
     // Initiala variabler (används för att synka till databasen)
     const initialTeamData = {
